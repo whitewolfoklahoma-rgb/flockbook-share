@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlockBook — Egg &amp; Cost-per-Dozen Tracker</title>
+<style>
+:root{
+  --bg:#faf6ee; --card:#ffffff; --ink:#2c2a24; --muted:#7a7466;
+  --green:#2f5d3a; --green2:#3c7a4c; --amber:#e0a83c; --amber2:#f5c95c;
+  --red:#b23a2e; --line:#e5ddca; --soft:#f3edda;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-size:16px; line-height:1.45;}
+header.app{background:var(--green); color:#fff; padding:14px 16px 10px;}
+header.app .brand{font-size:24px; font-weight:800; letter-spacing:.2px;}
+header.app .brand .egg{color:var(--amber2);}
+header.app .tag{font-size:13px; opacity:.85; margin-top:2px;}
+nav.tabs{display:flex; overflow-x:auto; background:var(--green); padding:0 6px 8px; gap:4px; scrollbar-width:none;}
+nav.tabs::-webkit-scrollbar{display:none;}
+nav.tabs button{flex:0 0 auto; min-height:42px; padding:8px 14px; border:0; border-radius:20px; background:rgba(255,255,255,.14); color:#fff; font-size:15px; font-weight:600; cursor:pointer;}
+nav.tabs button.active{background:var(--amber); color:#3a2c05;}
+main{max-width:980px; margin:0 auto; padding:14px 12px 40px;}
+h2.view-title{margin:4px 2px 12px; font-size:21px;}
+h3{margin:18px 2px 8px; font-size:17px;}
+.card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; box-shadow:0 1px 2px rgba(60,50,20,.05);}
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px;}
+.stat{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px;}
+.stat .k{font-size:12.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:700;}
+.stat .v{font-size:26px; font-weight:800; margin-top:2px;}
+.stat .s{font-size:13px; color:var(--muted); margin-top:2px;}
+.up{color:var(--red); font-weight:700;}
+.down{color:var(--green2); font-weight:700;}
+label{display:block; font-size:13.5px; font-weight:600; color:var(--muted); margin:10px 0 4px;}
+input,select,textarea{width:100%; min-height:44px; padding:9px 10px; font-size:16px; border:1.5px solid var(--line); border-radius:9px; background:#fff; color:var(--ink); font-family:inherit;}
+textarea{min-height:80px;}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--amber); border-color:var(--amber);}
+.row{display:flex; gap:10px; flex-wrap:wrap;}
+.row > div{flex:1 1 140px;}
+button.btn{min-height:44px; padding:10px 18px; border:0; border-radius:9px; background:var(--green); color:#fff; font-size:16px; font-weight:700; cursor:pointer;}
+button.btn:hover{background:var(--green2);}
+button.btn.amber{background:var(--amber); color:#3a2c05;}
+button.btn.ghost{background:var(--soft); color:var(--ink); border:1px solid var(--line);}
+button.btn.danger{background:var(--red);}
+button.btn.small{min-height:38px; padding:6px 12px; font-size:14px;min-height:40px;}
+button.btn:disabled{opacity:.5; cursor:not-allowed;}
+.stepper{display:flex; align-items:stretch; gap:8px;}
+.stepper button{width:52px; min-height:48px; font-size:24px; border-radius:9px; border:1.5px solid var(--line); background:var(--soft); cursor:pointer; font-weight:800;}
+.stepper input{text-align:center; font-size:20px; font-weight:700;}
+table{width:100%; border-collapse:collapse; font-size:14.5px;}
+th,td{padding:8px 6px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top;}
+th{color:var(--muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.4px;}
+td.num,th.num{text-align:right;}
+.empty{color:var(--muted); text-align:center; padding:18px 8px; font-size:15px;}
+.pill{display:inline-block; padding:2px 9px; border-radius:20px; font-size:12.5px; font-weight:700; background:var(--soft); color:var(--ink);}
+.pill.green{background:#e2efe2; color:var(--green);}
+.pill.red{background:#f8e3e0; color:var(--red);}
+.mut{color:var(--muted);} .small{font-size:13px;}
+.del{background:none; border:0; color:var(--red); font-size:18px; cursor:pointer; min-width:38px; min-height:38px;}
+canvas.chart{width:100%; height:220px; display:block;}
+.seg{display:inline-flex; border:1.5px solid var(--line); border-radius:9px; overflow:hidden;}
+.seg button{min-height:40px; padding:8px 16px; border:0; background:#fff; font-size:15px; font-weight:600; cursor:pointer;}
+.seg button.active{background:var(--green); color:#fff;}
+#toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(20px); background:#2c2a24; color:#fff; padding:11px 18px; border-radius:24px; font-size:15px; font-weight:600; opacity:0; pointer-events:none; transition:all .25s; max-width:92vw; text-align:center; z-index:60;}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+#toast.err{background:var(--red);}
+.modal-wrap{position:fixed; inset:0; background:rgba(30,25,10,.55); display:none; align-items:flex-start; justify-content:center; padding:22px 12px; z-index:50; overflow-y:auto;}
+.modal-wrap.open{display:flex;}
+.modal{background:#fff; border-radius:14px; max-width:640px; width:100%; padding:18px;}
+.modal h3{margin-top:0;}
+.help-sec p{margin:6px 0;}
+.help-sec li{margin:4px 0;}
+footer.app{max-width:980px; margin:0 auto; padding:0 12px 30px; color:var(--muted); font-size:13px; text-align:center;}
+#printArea{display:none;}
+@media print{
+  header.app, nav.tabs, main, footer.app, #toast{display:none !important;}
+  #printArea{display:block; font-size:14px;}
+  #printArea h1{font-size:20px;}
+  #printArea table{font-size:13px;}
+}
+@media (max-width:480px){
+  .stat .v{font-size:22px;}
+  th,td{padding:7px 4px; font-size:13.5px;}
+  header.app .brand{font-size:21px;}
+}
+</style>
+</head>
+<body>
+<header class="app">
+  <div class="brand">🐔 Flock<span class="egg">Book</span></div>
+  <div class="tag">Egg log &amp; true cost-per-dozen tracker for backyard flocks</div>
+</header>
+<nav class="tabs" id="tabbar"></nav>
+<main id="view"></main>
+<div id="printArea"></div>
+<div class="modal-wrap" id="dataModal">
+  <div class="modal">
+    <h3>Export / import your data</h3>
+    <p class="small mut">Export copies everything (flocks, eggs, costs, sales, settings) as one JSON file — keep it somewhere safe as your backup. Import replaces <b>all</b> current data with the backup's data.</p>
+    <label>Backup data (JSON)</label>
+    <textarea id="dataText" spellcheck="false"></textarea>
+    <div class="row" style="margin-top:12px;">
+      <div><button class="btn" onclick="downloadExport()">⬇ Download backup</button></div>
+      <div><button class="btn amber" onclick="importFromText()">⬆ Import from text</button></div>
+    </div>
+    <label style="margin-top:14px;">…or import from a backup file</label>
+    <input type="file" id="importFile" accept=".json,application/json" onchange="importFromFile(this)">
+    <div style="margin-top:14px; text-align:right;">
+      <button class="btn ghost" onclick="closeDataModal()">Close</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<footer class="app">FlockBook runs 100% offline. Your data never leaves this device — it lives in your browser's storage.</footer>
+
+<script>
+'use strict';
+/* ============================================================
+   FlockBook — backyard poultry egg & cost-per-dozen tracker
+   Single-file app. All data in localStorage under one key.
+   ============================================================ */
+var LS_KEY = 'flockbook_v1';
+var COST_CATS = [
+  {id:'feed',     label:'Feed'},
+  {id:'bedding',  label:'Bedding'},
+  {id:'supplies', label:'Supplies'},
+  {id:'coop',     label:'Coop & repairs'},
+  {id:'other',    label:'Other'}
+];
+
+/* ---------- date helpers (local dates, YYYY-MM-DD strings) ---------- */
+function pad2(n){ return (n<10?'0':'')+n; }
+function dateStr(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function todayStr(){ return dateStr(new Date()); }
+function parseDate(s){
+  if(typeof s!=='string') return null;
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if(!m) return null;
+  var y=+m[1], mo=+m[2], d=+m[3];
+  if(mo<1||mo>12||d<1||d>31) return null;
+  var dt = new Date(y, mo-1, d);
+  if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d) return null; /* rejects Feb 30 etc. */
+  return dt;
+}
+function isValidDateStr(s){ return !!parseDate(s); }
+function addDays(s, n){
+  var dt = parseDate(s); if(!dt) return s;
+  dt.setDate(dt.getDate()+n);
+  return dateStr(dt);
+}
+function daysBetween(a, b){ /* b - a in whole days */
+  var da=parseDate(a), db=parseDate(b);
+  if(!da||!db) return 0;
+  return Math.round((Date.UTC(db.getFullYear(),db.getMonth(),db.getDate())-Date.UTC(da.getFullYear(),da.getMonth(),da.getDate()))/86400000);
+}
+function fmtDate(s){
+  var dt = parseDate(s); if(!dt) return String(s||'');
+  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var mos=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return days[dt.getDay()]+' '+mos[dt.getMonth()]+' '+dt.getDate()+', '+dt.getFullYear();
+}
+function monthKey(s){ return (typeof s==='string'&&s.length>=7)? s.slice(0,7):''; }
+function monthLabel(k){
+  var mos=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var p=k.split('-'); if(p.length<2) return k;
+  return mos[(+p[1])-1]+' '+p[0];
+}
+
+/* ---------- number / text helpers ---------- */
+function num(x){ var n = (typeof x==='number')? x : parseFloat(x); return isFinite(n)? n : 0; }
+function intNum(x){ return Math.floor(num(x)); }
+function money(x){ return '$'+num(x).toFixed(2); }
+function moneyOrDash(x){ return (x===null||x===undefined||!isFinite(x))? '—' : money(x); }
+function pctOrDash(x){ return (x===null||x===undefined||!isFinite(x))? '—' : (Math.round(x*10)/10)+'%'; }
+function esc(s){
+  return String(s===null||s===undefined?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+var _uidSeq = 0;
+function uid(p){ _uidSeq++; return (p||'id')+'-'+Date.now().toString(36)+'-'+_uidSeq.toString(36)+Math.floor(Math.random()*1e6).toString(36); }
+
+/* ---------- state ---------- */
+function blankState(){
+  return {
+    settings:{ defaultPrice:5.00, storePrice:4.50, seeded:false },
+    flocks:[], countEvents:[], eggs:[], costs:[], sales:[]
+  };
+}
+var state = blankState();
+var currentTab = 'dashboard';
+var chartMode = 'weekly'; /* or 'monthly' */
+
+function sanitizeState(raw){
+  var s = blankState();
+  if(!raw || typeof raw!=='object') return s;
+  var st = raw.settings||{};
+  s.settings.defaultPrice = Math.max(0, num(st.defaultPrice));
+  s.settings.storePrice   = Math.max(0, num(st.storePrice));
+  s.settings.seeded = !!st.seeded;
+  function arr(key){ return Array.isArray(raw[key])? raw[key] : []; }
+  s.flocks = arr('flocks').filter(function(f){ return f && typeof f==='object'; }).map(function(f){
+    return { id:String(f.id||uid('flock')), name:String(f.name||'Unnamed flock'), breed:String(f.breed||''),
+             hensStart:Math.max(0,intNum(f.hensStart)), startedDate:isValidDateStr(f.startedDate)? f.startedDate : todayStr(),
+             demo:!!f.demo };
+  });
+  var flockIds = {}; s.flocks.forEach(function(f){ flockIds[f.id]=1; });
+  s.countEvents = arr('countEvents').filter(function(e){ return e && flockIds[e.flockId]; }).map(function(e){
+    var t=['add','death','cull','sale'].indexOf(e.type)>=0? e.type : 'add';
+    return { id:String(e.id||uid('cev')), flockId:String(e.flockId), date:isValidDateStr(e.date)? e.date : todayStr(),
+             type:t, count:Math.max(0,intNum(e.count)), note:String(e.note||''), demo:!!e.demo };
+  });
+  s.eggs = arr('eggs').filter(function(e){ return e && flockIds[e.flockId] && isValidDateStr(e.date); }).map(function(e){
+    var c=Math.max(0,intNum(e.collected)), b=Math.min(Math.max(0,intNum(e.broken)), c);
+    return { id:String(e.id||uid('egg')), flockId:String(e.flockId), date:e.date, collected:c, broken:b, demo:!!e.demo };
+  });
+  s.costs = arr('costs').filter(function(c){ return c && isValidDateStr(c.date); }).map(function(c){
+    var cat = COST_CATS.some(function(k){return k.id===c.category;})? c.category : 'other';
+    return { id:String(c.id||uid('cost')), date:c.date, category:cat, desc:String(c.desc||''),
+             amount:Math.max(0,num(c.amount)), weightLbs:Math.max(0,num(c.weightLbs)), demo:!!c.demo };
+  });
+  s.sales = arr('sales').filter(function(x){ return x && isValidDateStr(x.date); }).map(function(x){
+    return { id:String(x.id||uid('sale')), date:x.date, dozens:Math.max(0,num(x.dozens)),
+             price:Math.max(0,num(x.price)), customer:String(x.customer||''), note:String(x.note||''), demo:!!x.demo };
+  });
+  s.legal = (raw.legal && typeof raw.legal==='object') ? {termsVersion:String(raw.legal.termsVersion||''), acceptedDate:String(raw.legal.acceptedDate||''), disclaimerShown:!!raw.legal.disclaimerShown} : null;
+  return s;
+}
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){ /* storage full/blocked — keep running in-memory */ }
+}
+function load(){
+  var raw = null;
+  try{ raw = localStorage.getItem(LS_KEY); }catch(e){}
+  if(raw){
+    try{ state = sanitizeState(JSON.parse(raw)); }
+    catch(e){
+      state = blankState();
+      try{ localStorage.setItem(LS_KEY+'_corrupt_backup', raw); }catch(_){}
+      setTimeout(function(){ toast('Saved data was damaged — started fresh. A backup copy was kept.', true); }, 300);
+    }
+  }
+  if(!state.settings.seeded){
+    seedDemo();
+    state.settings.seeded = true;
+    save();
+  }
+}
+
+/* ---------- demo data (deterministic, relative to today) ---------- */
+function seedDemo(){
+  var t = todayStr();
+  function D(off){ return addDays(t, -off); }
+  state.flocks.push({ id:'demo-flock-a', name:'Backyard Layers', breed:'Barred Rock × Rhode Island Red', hensStart:12, startedDate:D(90), demo:true });
+  state.flocks.push({ id:'demo-flock-b', name:'New Pullets', breed:'Buff Orpington', hensStart:6, startedDate:D(35), demo:true });
+  state.countEvents.push({ id:'demo-cev-1', flockId:'demo-flock-b', date:D(12), type:'death', count:1, note:'Lost to a hawk', demo:true });
+  var i, off, c, b;
+  for(off=41; off>=0; off--){
+    c = 8 + ((off*7)%4);              /* 8–11 eggs/day */
+    b = (off%9===0)? 1 : 0;
+    state.eggs.push({ id:'demo-egg-a-'+off, flockId:'demo-flock-a', date:D(off), collected:c, broken:b, demo:true });
+  }
+  for(off=20; off>=0; off--){
+    c = 3 + (off%2);                  /* 3–4 eggs/day */
+    b = (off%11===0)? 1 : 0;
+    state.eggs.push({ id:'demo-egg-b-'+off, flockId:'demo-flock-b', date:D(off), collected:c, broken:b, demo:true });
+  }
+  state.costs.push({ id:'demo-cost-1', date:D(50), category:'coop',     desc:'Hinges + latch repair',   amount:34.00, weightLbs:0,  demo:true });
+  state.costs.push({ id:'demo-cost-2', date:D(35), category:'feed',     desc:'Layer pellets 50 lb',     amount:21.99, weightLbs:50, demo:true });
+  state.costs.push({ id:'demo-cost-3', date:D(20), category:'bedding',  desc:'Pine shavings bale',      amount:12.50, weightLbs:0,  demo:true });
+  state.costs.push({ id:'demo-cost-4', date:D(15), category:'supplies', desc:'Oyster shell 5 lb',       amount:8.75,  weightLbs:0,  demo:true });
+  state.costs.push({ id:'demo-cost-5', date:D(8),  category:'feed',     desc:'Layer pellets 50 lb',     amount:21.99, weightLbs:50, demo:true });
+  state.costs.push({ id:'demo-cost-6', date:D(3),  category:'other',    desc:'Mealworms (treat bag)',   amount:6.25,  weightLbs:0,  demo:true });
+  state.sales.push({ id:'demo-sale-1', date:D(18), dozens:4, price:5.00, customer:'Patty (neighbor)',   note:'', demo:true });
+  state.sales.push({ id:'demo-sale-2', date:D(9),  dozens:3, price:5.50, customer:'Sam — coworker',     note:'', demo:true });
+  state.sales.push({ id:'demo-sale-3', date:D(2),  dozens:6, price:5.00, customer:'Farmers market stand', note:'', demo:true });
+}
+/* ============================================================
+   CALCULATIONS — pure functions over state (also used by QA)
+   ============================================================ */
+function getFlock(id){ for(var i=0;i<state.flocks.length;i++) if(state.flocks[i].id===id) return state.flocks[i]; return null; }
+function hensOn(flockId, dateS){
+  var f = getFlock(flockId); if(!f) return 0;
+  if(daysBetween(f.startedDate, dateS) < 0) return 0; /* not started yet */
+  var n = f.hensStart;
+  for(var i=0;i<state.countEvents.length;i++){
+    var e = state.countEvents[i];
+    if(e.flockId!==flockId) continue;
+    if(daysBetween(e.date, dateS) < 0) continue; /* event is after the date asked */
+    if(e.type==='add') n += e.count; else n -= e.count;
+  }
+  return Math.max(0, n);
+}
+function hensNow(flockId){ return hensOn(flockId, todayStr()); }
+function totalHensNow(){
+  var n=0; state.flocks.forEach(function(f){ n += hensNow(f.id); }); return n;
+}
+function eggsInRange(flockId, startS, endS){ /* flockId null = all flocks */
+  var r = {collected:0, broken:0, net:0};
+  state.eggs.forEach(function(e){
+    if(flockId && e.flockId!==flockId) return;
+    if(daysBetween(startS, e.date)<0 || daysBetween(e.date, endS)<0) return;
+    r.collected += e.collected; r.broken += e.broken; r.net += (e.collected - e.broken);
+  });
+  return r;
+}
+function costsInRange(startS, endS, catId){
+  var total = 0;
+  state.costs.forEach(function(c){
+    if(catId && c.category!==catId) return;
+    if(daysBetween(startS, c.date)<0 || daysBetween(c.date, endS)<0) return;
+    total += c.amount;
+  });
+  return total;
+}
+function salesInRange(startS, endS){
+  var r = {dozens:0, income:0, count:0};
+  state.sales.forEach(function(s){
+    if(daysBetween(startS, s.date)<0 || daysBetween(s.date, endS)<0) return;
+    r.dozens += s.dozens; r.income += s.dozens * s.price; r.count++;
+  });
+  return r;
+}
+function allTimeRange(){
+  var dates = ['9999-12-31','0000-01-01'], min='9999-12-31', max='0000-01-01', any=false;
+  function see(d){ if(isValidDateStr(d)){ any=true; if(d<min)min=d; if(d>max)max=d; } }
+  state.eggs.forEach(function(e){ see(e.date); });
+  state.costs.forEach(function(c){ see(c.date); });
+  state.sales.forEach(function(s){ see(s.date); });
+  state.flocks.forEach(function(f){ see(f.startedDate); });
+  if(!any){ var t=todayStr(); return {start:t, end:t}; }
+  return {start:min, end:max};
+}
+function henDays(flockId, startS, endS){ /* sum of hens present each day in range (capped) */
+  var span = daysBetween(startS, endS);
+  if(span < 0) return 0;
+  if(span > 400) span = 400;
+  var total = 0, d = startS;
+  for(var i=0;i<=span;i++){ total += hensOn(flockId, d); d = addDays(d, 1); }
+  return total;
+}
+/* Lay rate uses eggs COLLECTED (laid) — broken eggs were still laid. */
+function layRatePct(flockId, startS, endS){
+  var hd = 0;
+  if(flockId){ hd = henDays(flockId, startS, endS); }
+  else { state.flocks.forEach(function(f){ hd += henDays(f.id, startS, endS); }); }
+  if(hd <= 0) return null;
+  var laid = eggsInRange(flockId, startS, endS).collected;
+  return (laid / hd) * 100;
+}
+/* Cost per dozen uses NET eggs (collected − broken) — the sellable/eatable eggs. */
+function costPerDozen(startS, endS){
+  var net = eggsInRange(null, startS, endS).net;
+  if(net <= 0) return null;
+  return costsInRange(startS, endS) / (net/12);
+}
+function costPerHenMonth(){ /* costs of last 30 days ÷ hens now */
+  var hens = totalHensNow(); if(hens<=0) return null;
+  var t = todayStr();
+  return costsInRange(addDays(t,-29), t) / hens;
+}
+function breakEvenPerDozen(startS, endS){ return costPerDozen(startS, endS); }
+function rangeLastDays(n){ var t=todayStr(); return {start:addDays(t,-(n-1)), end:t}; }
+function weeklyBuckets(weeks){ /* rolling 7-day buckets ending today, oldest first */
+  var t = todayStr(), out = [];
+  for(var i=weeks-1;i>=0;i--){
+    var end = addDays(t, -7*i), start = addDays(end, -6);
+    var e = eggsInRange(null, start, end);
+    out.push({start:start, end:end, collected:e.collected, broken:e.broken, net:e.net});
+  }
+  return out;
+}
+function monthlyBuckets(months){ /* calendar months incl. current, oldest first */
+  var now = new Date(), out = [];
+  for(var i=months-1;i>=0;i--){
+    var first = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    var last  = new Date(now.getFullYear(), now.getMonth()-i+1, 0);
+    var s = dateStr(first), e = dateStr(last);
+    if(e > todayStr()) e = todayStr();
+    var eg = eggsInRange(null, s, e);
+    out.push({key:monthKey(s), label:monthLabel(monthKey(s)), start:s, end:e, collected:eg.collected, broken:eg.broken, net:eg.net});
+  }
+  return out;
+}
+
+/* ============================================================
+   UI SCAFFOLDING
+   ============================================================ */
+var toastTimer = null;
+function toast(msg, isErr){
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (isErr? ' err':'');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.className=''; }, 3400);
+}
+var TABS = [
+  {id:'dashboard', label:'🏠 Dashboard'},
+  {id:'eggs',      label:'🥚 Egg Log'},
+  {id:'flocks',    label:'🐔 Flocks'},
+  {id:'costs',     label:'💰 Costs'},
+  {id:'sales',     label:'🧺 Sales'},
+  {id:'help',      label:'❓ Help'},
+  {id:'settings',  label:'⚙️ Settings'}
+];
+function go(tab){ currentTab = tab; render(); window.scrollTo(0,0); }
+function renderTabs(){
+  var bar = document.getElementById('tabbar');
+  bar.innerHTML = TABS.map(function(t){
+    return '<button class="'+(t.id===currentTab?'active':'')+'" onclick="go(\''+t.id+'\')">'+t.label+'</button>';
+  }).join('');
+}
+function render(){
+  renderTabs();
+  var v = document.getElementById('view');
+  if(currentTab==='dashboard') v.innerHTML = viewDashboard();
+  else if(currentTab==='eggs') v.innerHTML = viewEggs();
+  else if(currentTab==='flocks') v.innerHTML = viewFlocks();
+  else if(currentTab==='costs') v.innerHTML = viewCosts();
+  else if(currentTab==='sales') v.innerHTML = viewSales();
+  else if(currentTab==='help') v.innerHTML = viewHelp();
+  else if(currentTab==='settings') v.innerHTML = viewSettings();
+  if(currentTab==='eggs') drawChart();
+  renderPrintArea();
+}
+function statCard(k, v, s){
+  return '<div class="stat"><div class="k">'+esc(k)+'</div><div class="v">'+v+'</div>'+(s? '<div class="s">'+s+'</div>':'')+'</div>';
+}
+function flockOptions(selectedId, includeAll){
+  var h = '';
+  if(includeAll) h += '<option value="">All flocks</option>';
+  state.flocks.forEach(function(f){
+    h += '<option value="'+esc(f.id)+'"'+(f.id===selectedId?' selected':'')+'>'+esc(f.name)+' ('+hensNow(f.id)+' hens)</option>';
+  });
+  return h;
+}
+function renderPrintArea(){
+  var t = todayStr(), r30 = rangeLastDays(30), all = allTimeRange();
+  var e30 = eggsInRange(null, r30.start, r30.end);
+  var eAll = eggsInRange(null, all.start, all.end);
+  var cpd30 = costPerDozen(r30.start, r30.end), cpdAll = costPerDozen(all.start, all.end);
+  var sAll = salesInRange(all.start, all.end);
+  var cAll = costsInRange(all.start, all.end);
+  var rows = state.flocks.map(function(f){
+    return '<tr><td>'+esc(f.name)+'</td><td>'+esc(f.breed||'—')+'</td><td class="num">'+hensNow(f.id)+'</td><td class="num">'+pctOrDash(layRatePct(f.id, r30.start, r30.end))+'</td></tr>';
+  }).join('');
+  document.getElementById('printArea').innerHTML =
+    '<h1>🐔 FlockBook Summary — '+fmtDate(t)+'</h1>'+
+    '<p>Hens on hand: <b>'+totalHensNow()+'</b> in '+state.flocks.length+' flock(s)</p>'+
+    '<h3>Flocks</h3><table><tr><th>Flock</th><th>Breed</th><th class="num">Hens</th><th class="num">Lay rate (30d)</th></tr>'+(rows||'<tr><td colspan="4">No flocks</td></tr>')+'</table>'+
+    '<h3>Production</h3><p>Last 30 days: '+e30.net+' net eggs ('+(e30.net/12).toFixed(1)+' dozen) · All time: '+eAll.net+' net eggs ('+(eAll.net/12).toFixed(1)+' dozen)</p>'+
+    '<h3>Money</h3><p>Cost per dozen (30d): '+moneyOrDash(cpd30)+' · Cost per dozen (all time): '+moneyOrDash(cpdAll)+'<br>'+
+    'Egg sales income (all time): '+money(sAll.income)+' on '+sAll.dozens.toFixed(1)+' dozen · Total costs: '+money(cAll)+'<br>'+
+    'Profit (income − costs): '+money(sAll.income - cAll)+'</p>';
+}
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function viewDashboard(){
+  var t = todayStr();
+  var eToday = eggsInRange(null, t, t);
+  var r7 = rangeLastDays(7), r30 = rangeLastDays(30);
+  var rPrior30 = {start:addDays(t,-59), end:addDays(t,-30)};
+  var e7 = eggsInRange(null, r7.start, r7.end);
+  var cpd30 = costPerDozen(r30.start, r30.end);
+  var cpdPrior = costPerDozen(rPrior30.start, rPrior30.end);
+  var trendHtml = '';
+  if(cpd30!==null && cpdPrior!==null && cpdPrior>0){
+    var diff = cpd30 - cpdPrior, pct = Math.abs(diff/cpdPrior*100).toFixed(0);
+    if(diff > 0.005) trendHtml = 'Cost/dozen trend: <span class="up">▲ '+money(diff)+' vs prior 30 days (+'+pct+'%)</span>';
+    else if(diff < -0.005) trendHtml = 'Cost/dozen trend: <span class="down">▼ '+money(Math.abs(diff))+' vs prior 30 days (−'+pct+'%)</span>';
+    else trendHtml = 'Cost/dozen trend: flat vs prior 30 days';
+  }
+  var s30 = salesInRange(r30.start, r30.end);
+  var c30 = costsInRange(r30.start, r30.end);
+  var profit30 = s30.income - c30;
+  var lr7 = layRatePct(null, r7.start, r7.end);
+  var storeNote = '';
+  if(cpd30!==null){
+    if(cpd30 < state.settings.storePrice) storeNote = 'Beats the store ('+money(state.settings.storePrice)+'/doz) by '+money(state.settings.storePrice-cpd30)+' a dozen 🎉';
+    else storeNote = 'Store eggs run '+money(state.settings.storePrice)+'/doz — your cost is above that right now';
+  }
+  var flockRows = state.flocks.map(function(f){
+    var fe = eggsInRange(f.id, t, t);
+    var flr = layRatePct(f.id, r7.start, r7.end);
+    return '<tr><td><b>'+esc(f.name)+'</b><div class="small mut">'+esc(f.breed||'')+'</div></td>'+
+      '<td class="num">'+hensNow(f.id)+'</td><td class="num">'+fe.collected+'</td><td class="num">'+pctOrDash(flr)+'</td></tr>';
+  }).join('');
+  var quick = '';
+  if(state.flocks.length){
+    quick = '<div class="card"><h3 style="margin-top:0;">🥚 Quick-add today\'s eggs</h3>'+
+      '<label>Flock</label><select id="qaFlock">'+flockOptions(state.flocks[0].id,false)+'</select>'+
+      '<label>Eggs collected today</label><div class="stepper"><button onclick="stepQty(\'qaCount\',-1)">−</button><input id="qaCount" type="number" inputmode="numeric" min="0" value="0"><button onclick="stepQty(\'qaCount\',1)">+</button></div>'+
+      '<div style="margin-top:12px;"><button class="btn amber" onclick="quickAddEggs()">＋ Add to today\'s count</button></div>'+
+      '<p class="small mut">Adds to whatever is already logged for today. Use the Egg Log tab to set exact numbers or record broken/dirty eggs.</p></div>';
+  }
+  return '<h2 class="view-title">Dashboard</h2>'+
+    '<div class="grid">'+
+      statCard('Eggs today', eToday.net, eToday.collected+' collected · '+eToday.broken+' broken/dirty')+
+      statCard('Dozens this week', (e7.net/12).toFixed(1), e7.net+' net eggs, last 7 days')+
+      statCard('Cost per dozen (30d)', moneyOrDash(cpd30), trendHtml||'Needs eggs + costs in the last 30 days')+
+      statCard('Hens on hand', totalHensNow(), state.flocks.length+' flock(s)')+
+      statCard('Lay rate (7d)', pctOrDash(lr7), 'Eggs laid per hen per day')+
+      statCard('Profit (30d)', money(profit30), money(s30.income)+' in · '+money(c30)+' out')+
+    '</div>'+
+    (storeNote? '<div class="card" style="margin-top:12px;">'+storeNote+'</div>':'')+
+    quick+
+    '<div class="card"><h3 style="margin-top:0;">Your flocks</h3>'+
+      (state.flocks.length? '<table><tr><th>Flock</th><th class="num">Hens</th><th class="num">Eggs today</th><th class="num">Lay rate 7d</th></tr>'+flockRows+'</table>'
+                           : '<div class="empty">No flocks yet — add your first flock in the Flocks tab.</div>')+
+    '</div>'+
+    '<div class="card"><button class="btn ghost" onclick="window.print()">🖨️ Print summary</button></div>';
+}
+function stepQty(id, d){
+  var el = document.getElementById(id);
+  var v = intNum(el.value) + d;
+  if(v<0) v=0;
+  el.value = v;
+}
+function quickAddEggs(){
+  var flockId = document.getElementById('qaFlock').value;
+  var n = intNum(document.getElementById('qaCount').value);
+  if(!getFlock(flockId)){ toast('Pick a flock first.', true); return; }
+  if(n<=0){ toast('Enter how many eggs you collected.', true); return; }
+  var t = todayStr();
+  var ex = findEggEntry(flockId, t);
+  if(ex){ ex.collected += n; }
+  else state.eggs.push({ id:uid('egg'), flockId:flockId, date:t, collected:n, broken:0, demo:false });
+  save(); render();
+  toast('Added '+n+' egg'+(n===1?'':'s')+' for today. 🥚');
+}
+
+/* ============================================================
+   EGG LOG
+   ============================================================ */
+function findEggEntry(flockId, dateS){
+  for(var i=0;i<state.eggs.length;i++) if(state.eggs[i].flockId===flockId && state.eggs[i].date===dateS) return state.eggs[i];
+  return null;
+}
+function viewEggs(){
+  var t = todayStr();
+  var recent = state.eggs.slice().sort(function(a,b){ return a.date<b.date? 1 : (a.date>b.date? -1 : 0); }).slice(0,21);
+  var rows = recent.map(function(e){
+    var f = getFlock(e.flockId);
+    return '<tr><td>'+fmtDate(e.date)+'</td><td>'+esc(f? f.name : '(deleted flock)')+'</td>'+
+      '<td class="num">'+e.collected+'</td><td class="num">'+e.broken+'</td><td class="num"><b>'+(e.collected-e.broken)+'</b></td>'+
+      '<td><button class="del" title="Delete entry" onclick="deleteEgg(\''+e.id+'\')">✕</button></td></tr>';
+  }).join('');
+  var wk = weeklyBuckets(1)[0], r30 = rangeLastDays(30);
+  return '<h2 class="view-title">Egg Log</h2>'+
+    '<div class="grid">'+
+      statCard('This week', wk.net+' eggs', (wk.net/12).toFixed(1)+' dozen net')+
+      statCard('Last 30 days', eggsInRange(null, r30.start, r30.end).net+' eggs', (eggsInRange(null, r30.start, r30.end).net/12).toFixed(1)+' dozen net')+
+      statCard('All-time lay rate', pctOrDash(layRatePct(null, addDays(t,-29), t)), 'Last 30 days, all flocks')+
+    '</div>'+
+    '<div class="card"><h3 style="margin-top:0;">Log eggs</h3>'+
+      '<div class="row"><div><label>Flock</label><select id="egFlock">'+flockOptions(state.flocks.length? state.flocks[0].id : '', false)+'</select></div>'+
+      '<div><label>Date</label><input id="egDate" type="date" value="'+t+'"></div></div>'+
+      '<div class="row"><div><label>Eggs collected</label><div class="stepper"><button onclick="stepQty(\'egCollected\',-1)">−</button><input id="egCollected" type="number" inputmode="numeric" min="0" value="0"><button onclick="stepQty(\'egCollected\',1)">+</button></div></div>'+
+      '<div><label>Broken / dirty (deducted)</label><div class="stepper"><button onclick="stepQty(\'egBroken\',-1)">−</button><input id="egBroken" type="number" inputmode="numeric" min="0" value="0"><button onclick="stepQty(\'egBroken\',1)">+</button></div></div></div>'+
+      '<div style="margin-top:12px;"><button class="btn" onclick="saveEgg()">Save egg count</button></div>'+
+      '<p class="small mut">Saving again for the same flock + date <b>replaces</b> that day\'s numbers (one entry per flock per day).</p></div>'+
+    '<div class="card"><h3 style="margin-top:0;">Production chart</h3>'+
+      '<div class="seg"><button class="'+(chartMode==='weekly'?'active':'')+'" onclick="setChartMode(\'weekly\')">Weekly</button><button class="'+(chartMode==='monthly'?'active':'')+'" onclick="setChartMode(\'monthly\')">Monthly</button></div>'+
+      '<div style="margin-top:10px;"><canvas id="prodChart" class="chart" width="900" height="220"></canvas></div>'+
+      '<p class="small mut" id="chartNote"></p></div>'+
+    '<div class="card"><h3 style="margin-top:0;">Recent entries</h3>'+
+      (recent.length? '<table><tr><th>Date</th><th>Flock</th><th class="num">Collected</th><th class="num">Broken</th><th class="num">Net</th><th></th></tr>'+rows+'</table>'
+                     : '<div class="empty">No eggs logged yet.</div>')+'</div>';
+}
+function setChartMode(m){ chartMode = m; render(); }
+function saveEgg(){
+  var flockId = document.getElementById('egFlock').value;
+  var dateS = document.getElementById('egDate').value;
+  var rawC = document.getElementById('egCollected').value;
+  var rawB = document.getElementById('egBroken').value;
+  if(!getFlock(flockId)){ toast('Add a flock first (Flocks tab).', true); return; }
+  if(!isValidDateStr(dateS)){ toast('Pick a valid date.', true); return; }
+  if(String(rawC).trim()==='' || String(rawB).trim()===''){ toast('Enter egg counts (0 is fine).', true); return; }
+  var c = num(rawC), b = num(rawB);
+  if(c<0 || b<0 || Math.floor(c)!==c || Math.floor(b)!==b){ toast('Egg counts must be whole numbers, 0 or more.', true); return; }
+  if(b>c){ toast('Broken/dirty can\'t be more than collected.', true); return; }
+  var ex = findEggEntry(flockId, dateS);
+  if(ex){ ex.collected = c; ex.broken = b; ex.demo = false; }
+  else state.eggs.push({ id:uid('egg'), flockId:flockId, date:dateS, collected:c, broken:b, demo:false });
+  save(); render();
+  toast('Saved — '+c+' collected, '+b+' broken. Net '+(c-b)+'.');
+}
+function deleteEgg(id){
+  if(!confirm('Delete this egg entry?')) return;
+  state.eggs = state.eggs.filter(function(e){ return e.id!==id; });
+  save(); render(); toast('Entry deleted.');
+}
+function drawChart(){
+  var canvas = document.getElementById('prodChart');
+  var note = document.getElementById('chartNote');
+  if(!canvas) return;
+  var data = chartMode==='weekly'
+    ? weeklyBuckets(12).map(function(w){ return {label:fmtDate(w.end).replace(/^[A-Za-z]+ /,''), net:w.net}; })
+    : monthlyBuckets(12).map(function(m){ return {label:m.label, net:m.net}; });
+  if(note) note.textContent = chartMode==='weekly'
+    ? 'Net eggs per 7-day block (broken/dirty already deducted).'
+    : 'Net eggs per calendar month (broken/dirty already deducted).';
+  var ctx = null;
+  try{ ctx = canvas.getContext && canvas.getContext('2d'); }catch(e){ ctx = null; }
+  if(!ctx){ if(note) note.textContent = 'Chart unavailable in this browser — your numbers are in the table above.'; return; }
+  var W = canvas.width, H = canvas.height, dpr = 1;
+  ctx.clearRect(0,0,W,H);
+  var max = 0; data.forEach(function(d){ if(d.net>max) max=d.net; });
+  var padL=8, padR=8, padT=16, padB=26, plotH = H-padT-padB, plotW = W-padL-padR;
+  var bw = plotW / data.length;
+  ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+  if(max<=0){
+    ctx.fillStyle = '#7a7466'; ctx.font='14px sans-serif';
+    ctx.fillText('No eggs in this period yet — log some eggs to see your chart.', W/2, H/2);
+    return;
+  }
+  data.forEach(function(d, i){
+    var h = Math.max(2, (d.net/max)*plotH);
+    var x = padL + i*bw + bw*0.18, w = bw*0.64, y = padT + (plotH-h);
+    ctx.fillStyle = '#e0a83c';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#2c2a24';
+    ctx.fillText(String(d.net), x+w/2, y-4);
+    ctx.fillStyle = '#7a7466';
+    var lbl = d.label.length>10? d.label.slice(0,10) : d.label;
+    ctx.fillText(lbl, x+w/2, H-8);
+  });
+  ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(padL, padT+plotH, plotW, 1);
+}
+/* ============================================================
+   FLOCKS
+   ============================================================ */
+function viewFlocks(){
+  var t = todayStr(), r7 = rangeLastDays(7), r30 = rangeLastDays(30);
+  var cards = state.flocks.map(function(f){
+    var now = hensNow(f.id);
+    var e30 = eggsInRange(f.id, r30.start, r30.end);
+    var lr7 = layRatePct(f.id, r7.start, r7.end), lr30 = layRatePct(f.id, r30.start, r30.end);
+    var evs = state.countEvents.filter(function(e){ return e.flockId===f.id; })
+      .sort(function(a,b){ return a.date<b.date? 1 : (a.date>b.date? -1 : 0); });
+    var evRows = evs.map(function(e){
+      var lbl = {add:'➕ Added', death:'🪦 Died', cull:'✂️ Culled', sale:'💵 Sold'}[e.type]||e.type;
+      return '<tr><td>'+fmtDate(e.date)+'</td><td>'+lbl+'</td><td class="num">'+e.count+'</td><td>'+esc(e.note||'')+'</td>'+
+        '<td><button class="del" title="Delete change" onclick="deleteCountEvent(\''+e.id+'\')">✕</button></td></tr>';
+    }).join('');
+    return '<div class="card"><h3 style="margin-top:0;">'+esc(f.name)+' <span class="pill green">'+now+' hens</span></h3>'+
+      '<p class="small mut" style="margin:2px 0;">'+esc(f.breed||'Breed not noted')+' · Started '+fmtDate(f.startedDate)+' with '+f.hensStart+' hens</p>'+
+      '<div class="grid" style="margin-top:8px;">'+
+        statCard('Eggs (30d)', e30.net+' net', e30.collected+' collected')+
+        statCard('Lay rate (7d)', pctOrDash(lr7), '')+
+        statCard('Lay rate (30d)', pctOrDash(lr30), '')+
+      '</div>'+
+      '<h3>Record a change</h3>'+
+      '<div class="row"><div><label>Type</label><select id="cevType-'+f.id+'"><option value="add">Added hens</option><option value="death">Died</option><option value="cull">Culled</option><option value="sale">Sold</option></select></div>'+
+      '<div><label>How many</label><input id="cevCount-'+f.id+'" type="number" inputmode="numeric" min="1" value="1"></div>'+
+      '<div><label>Date</label><input id="cevDate-'+f.id+'" type="date" value="'+t+'"></div></div>'+
+      '<label>Note (optional)</label><input id="cevNote-'+f.id+'" type="text" placeholder="e.g. Bought 4 pullets at the swap">'+
+      '<div style="margin-top:10px;"><button class="btn small" onclick="addCountEvent(\''+f.id+'\')">Save change</button> '+
+      '<button class="btn small ghost" onclick="deleteFlock(\''+f.id+'\')">Delete flock</button></div>'+
+      (evs.length? '<h3>History</h3><table><tr><th>Date</th><th>Change</th><th class="num">#</th><th>Note</th><th></th></tr>'+evRows+'</table>' : '<p class="small mut">No changes recorded yet.</p>')+
+      '</div>';
+  }).join('');
+  return '<h2 class="view-title">Flocks</h2>'+
+    '<div class="card"><h3 style="margin-top:0;">Add a flock</h3>'+
+      '<div class="row"><div><label>Flock name *</label><input id="nfName" type="text" placeholder="e.g. Backyard Layers"></div>'+
+      '<div><label>Breed</label><input id="nfBreed" type="text" placeholder="e.g. Rhode Island Red"></div></div>'+
+      '<div class="row"><div><label>Hens to start</label><input id="nfHens" type="number" inputmode="numeric" min="0" value="6"></div>'+
+      '<div><label>Start date</label><input id="nfDate" type="date" value="'+t+'"></div></div>'+
+      '<div style="margin-top:12px;"><button class="btn" onclick="addFlock()">Add flock</button></div></div>'+
+    (cards || '<div class="card"><div class="empty">No flocks yet — add your first one above.</div></div>');
+}
+function addFlock(){
+  var name = document.getElementById('nfName').value.trim();
+  var breed = document.getElementById('nfBreed').value.trim();
+  var hensRaw = document.getElementById('nfHens').value;
+  var dateS = document.getElementById('nfDate').value;
+  if(!name){ toast('Give the flock a name.', true); return; }
+  if(String(hensRaw).trim()==='' || num(hensRaw)<0 || Math.floor(num(hensRaw))!==num(hensRaw)){ toast('Hens to start must be a whole number, 0 or more.', true); return; }
+  if(!isValidDateStr(dateS)){ toast('Pick a valid start date.', true); return; }
+  state.flocks.push({ id:uid('flock'), name:name, breed:breed, hensStart:intNum(hensRaw), startedDate:dateS, demo:false });
+  save(); render(); toast('Flock "'+name+'" added. 🐔');
+}
+function addCountEvent(flockId){
+  var type = document.getElementById('cevType-'+flockId).value;
+  var countRaw = document.getElementById('cevCount-'+flockId).value;
+  var dateS = document.getElementById('cevDate-'+flockId).value;
+  var note = document.getElementById('cevNote-'+flockId).value.trim();
+  var c = num(countRaw);
+  if(String(countRaw).trim()==='' || c<=0 || Math.floor(c)!==c){ toast('How many must be a whole number above 0.', true); return; }
+  if(!isValidDateStr(dateS)){ toast('Pick a valid date.', true); return; }
+  var f = getFlock(flockId); if(!f){ toast('Flock not found.', true); return; }
+  if(daysBetween(f.startedDate, dateS) < 0){ toast('That date is before this flock started.', true); return; }
+  if(type!=='add' && c > hensOn(flockId, dateS)){
+    toast('That would take the flock below zero hens on that date (it had '+hensOn(flockId, dateS)+').', true); return;
+  }
+  state.countEvents.push({ id:uid('cev'), flockId:flockId, date:dateS, type:type, count:intNum(countRaw), note:note, demo:false });
+  save(); render(); toast('Change recorded. Hens now: '+hensNow(flockId)+'.');
+}
+function deleteCountEvent(id){
+  if(!confirm('Delete this flock change? Hen counts will adjust.')) return;
+  state.countEvents = state.countEvents.filter(function(e){ return e.id!==id; });
+  save(); render(); toast('Change deleted.');
+}
+function deleteFlock(id){
+  var f = getFlock(id); if(!f) return;
+  if(!confirm('Delete flock "'+f.name+'" AND all its egg entries and history? This cannot be undone.')) return;
+  state.flocks = state.flocks.filter(function(x){ return x.id!==id; });
+  state.countEvents = state.countEvents.filter(function(e){ return e.flockId!==id; });
+  state.eggs = state.eggs.filter(function(e){ return e.flockId!==id; });
+  save(); render(); toast('Flock deleted.');
+}
+/* ============================================================
+   COSTS
+   ============================================================ */
+function catLabel(id){ for(var i=0;i<COST_CATS.length;i++) if(COST_CATS[i].id===id) return COST_CATS[i].label; return 'Other'; }
+function viewCosts(){
+  var t = todayStr(), r30 = rangeLastDays(30), all = allTimeRange();
+  var catOpts = COST_CATS.map(function(c){ return '<option value="'+c.id+'">'+c.label+'</option>'; }).join('');
+  var catRows = COST_CATS.map(function(c){
+    return '<tr><td>'+c.label+'</td><td class="num">'+money(costsInRange(r30.start, r30.end, c.id))+'</td><td class="num">'+money(costsInRange(all.start, all.end, c.id))+'</td></tr>';
+  }).join('');
+  var list = state.costs.slice().sort(function(a,b){ return a.date<b.date? 1 : (a.date>b.date? -1 : 0); }).slice(0,40);
+  var rows = list.map(function(c){
+    var per = (c.category==='feed' && c.weightLbs>0)? '<div class="small mut">'+money(c.amount/c.weightLbs)+'/lb</div>' : '';
+    return '<tr><td>'+fmtDate(c.date)+'</td><td>'+esc(catLabel(c.category))+'</td><td>'+esc(c.desc||'')+'</td>'+
+      '<td class="num">'+money(c.amount)+per+'</td><td><button class="del" title="Delete cost" onclick="deleteCost(\''+c.id+'\')">✕</button></td></tr>';
+  }).join('');
+  return '<h2 class="view-title">Costs</h2>'+
+    '<div class="grid">'+
+      statCard('Costs (30d)', money(costsInRange(r30.start, r30.end)), '')+
+      statCard('Costs (all time)', money(costsInRange(all.start, all.end)), '')+
+      statCard('Cost per hen (30d)', moneyOrDash(costPerHenMonth()), 'Per hen for the last 30 days')+
+      statCard('Cost per dozen (30d)', moneyOrDash(costPerDozen(r30.start, r30.end)), 'All time: '+moneyOrDash(costPerDozen(all.start, all.end)))+
+    '</div>'+
+    '<div class="card"><h3 style="margin-top:0;">Add a cost</h3>'+
+      '<div class="row"><div><label>Date</label><input id="coDate" type="date" value="'+t+'"></div>'+
+      '<div><label>Category</label><select id="coCat">'+catOpts+'</select></div>'+
+      '<div><label>Amount ($) *</label><input id="coAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="21.99"></div></div>'+
+      '<div class="row"><div><label>What was it?</label><input id="coDesc" type="text" placeholder="e.g. Layer pellets 50 lb"></div>'+
+      '<div><label>Feed weight (lb) — feed only</label><input id="coWeight" type="number" inputmode="decimal" min="0" step="0.1" placeholder="50"></div></div>'+
+      '<div style="margin-top:12px;"><button class="btn" onclick="addCost()">Add cost</button></div>'+
+      '<p class="small mut">Tip: enter the bag weight on feed and FlockBook tracks your price per pound — handy for spotting feed-store price creep.</p></div>'+
+    '<div class="card"><h3 style="margin-top:0;">Costs by category</h3><table><tr><th>Category</th><th class="num">Last 30d</th><th class="num">All time</th></tr>'+catRows+'</table></div>'+
+    '<div class="card"><h3 style="margin-top:0;">Recent costs</h3>'+
+      (list.length? '<table><tr><th>Date</th><th>Category</th><th>What</th><th class="num">Amount</th><th></th></tr>'+rows+'</table>' : '<div class="empty">No costs logged yet.</div>')+'</div>';
+}
+function addCost(){
+  var dateS = document.getElementById('coDate').value;
+  var cat = document.getElementById('coCat').value;
+  var amtRaw = document.getElementById('coAmount').value;
+  var desc = document.getElementById('coDesc').value.trim();
+  var wRaw = document.getElementById('coWeight').value;
+  if(!isValidDateStr(dateS)){ toast('Pick a valid date.', true); return; }
+  if(String(amtRaw).trim()==='' || num(amtRaw)<=0){ toast('Enter an amount above $0.', true); return; }
+  var w = (cat==='feed')? Math.max(0, num(wRaw)) : 0;
+  state.costs.push({ id:uid('cost'), date:dateS, category:cat, desc:desc, amount:Math.round(num(amtRaw)*100)/100, weightLbs:w, demo:false });
+  save(); render(); toast('Cost added: '+money(amtRaw)+'.');
+}
+function deleteCost(id){
+  if(!confirm('Delete this cost entry?')) return;
+  state.costs = state.costs.filter(function(c){ return c.id!==id; });
+  save(); render(); toast('Cost deleted.');
+}
+
+/* ============================================================
+   SALES
+   ============================================================ */
+function viewSales(){
+  var t = todayStr(), r30 = rangeLastDays(30), all = allTimeRange();
+  var sAll = salesInRange(all.start, all.end), s30 = salesInRange(r30.start, r30.end);
+  var cAll = costsInRange(all.start, all.end), c30 = costsInRange(r30.start, r30.end);
+  var beAll = breakEvenPerDozen(all.start, all.end), be30 = breakEvenPerDozen(r30.start, r30.end);
+  var avgPrice = sAll.dozens>0? sAll.income/sAll.dozens : null;
+  var list = state.sales.slice().sort(function(a,b){ return a.date<b.date? 1 : (a.date>b.date? -1 : 0); }).slice(0,40);
+  var rows = list.map(function(s){
+    return '<tr><td>'+fmtDate(s.date)+'</td><td>'+esc(s.customer||'—')+(s.note? '<div class="small mut">'+esc(s.note)+'</div>':'')+'</td>'+
+      '<td class="num">'+s.dozens+'</td><td class="num">'+money(s.price)+'</td><td class="num"><b>'+money(s.dozens*s.price)+'</b></td>'+
+      '<td><button class="del" title="Delete sale" onclick="deleteSale(\''+s.id+'\')">✕</button></td></tr>';
+  }).join('');
+  return '<h2 class="view-title">Sales &amp; Profit</h2>'+
+    '<div class="grid">'+
+      statCard('Egg income (all time)', money(sAll.income), sAll.dozens.toFixed(1)+' dozen sold · avg '+moneyOrDash(avgPrice)+'/doz')+
+      statCard('Profit (all time)', money(sAll.income - cAll), 'Income − all costs')+
+      statCard('Profit (30d)', money(s30.income - c30), money(s30.income)+' in · '+money(c30)+' out')+
+      statCard('Break-even price', moneyOrDash(beAll), 'Per dozen, all time · 30d: '+moneyOrDash(be30))+
+    '</div>'+
+    '<div class="card"><p style="margin:0;">💡 <b>Break-even price</b> = everything you\'ve spent ÷ every sellable (net) dozen your hens produced. Price your eggs above it and the flock pays for itself. Your store comparison price is set to <b>'+money(state.settings.storePrice)+'/dozen</b> (change it in Settings).</p></div>'+
+    '<div class="card"><h3 style="margin-top:0;">Record a sale</h3>'+
+      '<div class="row"><div><label>Date</label><input id="saDate" type="date" value="'+t+'"></div>'+
+      '<div><label>Dozens sold *</label><input id="saDozens" type="number" inputmode="decimal" min="0" step="0.5" placeholder="2"></div>'+
+      '<div><label>Price per dozen ($)</label><input id="saPrice" type="number" inputmode="decimal" min="0" step="0.05" value="'+state.settings.defaultPrice.toFixed(2)+'"></div></div>'+
+      '<div class="row"><div><label>Customer</label><input id="saCustomer" type="text" placeholder="e.g. Patty (neighbor)"></div>'+
+      '<div><label>Note (optional)</label><input id="saNote" type="text" placeholder="e.g. 1 brown, 1 mixed"></div></div>'+
+      '<div style="margin-top:12px;"><button class="btn" onclick="addSale()">Record sale</button></div></div>'+
+    '<div class="card"><h3 style="margin-top:0;">Recent sales</h3>'+
+      (list.length? '<table><tr><th>Date</th><th>Customer</th><th class="num">Doz</th><th class="num">$/doz</th><th class="num">Total</th><th></th></tr>'+rows+'</table>' : '<div class="empty">No sales recorded yet.</div>')+'</div>';
+}
+function addSale(){
+  var dateS = document.getElementById('saDate').value;
+  var dzRaw = document.getElementById('saDozens').value;
+  var prRaw = document.getElementById('saPrice').value;
+  var customer = document.getElementById('saCustomer').value.trim();
+  var note = document.getElementById('saNote').value.trim();
+  if(!isValidDateStr(dateS)){ toast('Pick a valid date.', true); return; }
+  if(String(dzRaw).trim()==='' || num(dzRaw)<=0){ toast('Enter dozens sold (above 0).', true); return; }
+  if(String(prRaw).trim()==='' || num(prRaw)<0){ toast('Enter a price per dozen (0 is allowed for giveaways).', true); return; }
+  state.sales.push({ id:uid('sale'), date:dateS, dozens:num(dzRaw), price:Math.round(num(prRaw)*100)/100, customer:customer, note:note, demo:false });
+  save(); render(); toast('Sale recorded: '+money(num(dzRaw)*num(prRaw))+' 🧺');
+}
+function deleteSale(id){
+  if(!confirm('Delete this sale?')) return;
+  state.sales = state.sales.filter(function(s){ return s.id!==id; });
+  save(); render(); toast('Sale deleted.');
+}
+/* ============================================================
+   HELP
+   ============================================================ */
+function viewHelp(){
+  return '<h2 class="view-title">Help — how FlockBook works</h2>'+
+  '<div class="card help-sec"><h3 style="margin-top:0;">The 30-second version</h3>'+
+  '<p>1. Add your flock(s) in the <b>Flocks</b> tab. 2. Log eggs as you collect them (the Dashboard quick-add is fastest). 3. Log feed and supply costs in <b>Costs</b>. 4. Log dozens you sell in <b>Sales</b>. FlockBook does the math: cost per dozen, lay rate, and profit.</p></div>'+
+  '<div class="card help-sec"><h3 style="margin-top:0;">How the numbers are calculated</h3>'+
+  '<ul>'+
+  '<li><b>Net eggs</b> = eggs collected − broken/dirty. Cracked and filthy eggs aren\'t sellable, so production-for-sale numbers use net eggs.</li>'+
+  '<li><b>Lay rate %</b> = eggs collected ÷ hen-days. If 10 hens laid 17 eggs over 2 days, that\'s 17 ÷ 20 = 85%. Lay rate uses <i>collected</i> eggs (broken ones were still laid) and counts the hens you actually had each day, so mid-period deaths/additions are handled correctly.</li>'+
+  '<li><b>Cost per dozen</b> = all costs in the period ÷ net dozens produced in the same period. "Rolling 30-day" uses the last 30 days; "all time" uses everything you\'ve logged.</li>'+
+  '<li><b>Cost per hen</b> = last 30 days of costs ÷ hens on hand now.</li>'+
+  '<li><b>Break-even price per dozen</b> = your cost per dozen. Sell above it and the flock covers its own costs.</li>'+
+  '<li><b>Hen counts</b>: a flock starts with its start count; every recorded change (added / died / culled / sold) adjusts the count from that date forward, so history stays truthful.</li>'+
+  '</ul></div>'+
+  '<div class="card help-sec"><h3 style="margin-top:0;">Good habits</h3>'+
+  '<ul>'+
+  '<li>Log eggs daily — it takes ten seconds with the Dashboard quick-add, and your lay-rate trend stays honest.</li>'+
+  '<li>Log feed the day you buy it, with the bag weight. Price-per-pound exposes the true cost creep.</li>'+
+  '<li>One entry per flock per day: saving the Egg Log form again for the same day <i>replaces</i> that day\'s numbers — no double counting.</li>'+
+  '<li>Broken/dirty eggs go in the "broken" box, not skipped — they still tell you about shell quality and handling.</li>'+
+  '<li>Export a backup (Settings) every month or so. Your data lives only in this browser on this device.</li>'+
+  '</ul></div>'+
+  '<div class="card help-sec"><h3 style="margin-top:0;">Questions people ask</h3>'+
+  '<p><b>Where is my data?</b> In this browser\'s local storage, on this device only. Nothing is uploaded anywhere; there is no account and no server. Clearing your browser\'s site data erases it — that\'s what backups are for.</p>'+
+  '<p><b>Can I use it on my phone and computer?</b> Yes — open the same file on each. They don\'t sync automatically; export on one device and import on the other to move your records.</p>'+
+  '<p><b>Does it work without internet?</b> Completely. After download it never needs a connection.</p>'+
+  '<p><b>Is this farm accounting software?</b> No — FlockBook is built for backyard flocks and small egg sellers: eggs, costs, and honest per-dozen math. It doesn\'t do taxes, invoices, or whole-farm books.</p>'+
+  '<p><b>My lay rate looks wrong.</b> Check the flock\'s hen history — a forgotten death or unrecorded additions will skew hen-days. Fix the change (wrong date? delete and re-add) and the rate recalculates.</p></div>';
+}
+
+/* ============================================================
+   SETTINGS & DATA
+   ============================================================ */
+function viewSettings(){
+  var hasDemo = state.flocks.some(function(f){return f.demo;}) || state.eggs.some(function(e){return e.demo;}) ||
+                state.costs.some(function(c){return c.demo;}) || state.sales.some(function(s){return s.demo;});
+  return '<h2 class="view-title">Settings</h2>'+
+  '<div class="card"><h3 style="margin-top:0;">Prices</h3>'+
+    '<div class="row"><div><label>Your default egg price ($/dozen)</label><input id="setPrice" type="number" inputmode="decimal" min="0" step="0.05" value="'+state.settings.defaultPrice.toFixed(2)+'"></div>'+
+    '<div><label>Store price to compare against ($/dozen)</label><input id="setStore" type="number" inputmode="decimal" min="0" step="0.05" value="'+state.settings.storePrice.toFixed(2)+'"></div></div>'+
+    '<div style="margin-top:12px;"><button class="btn" onclick="saveSettings()">Save settings</button></div></div>'+
+  '<div class="card"><h3 style="margin-top:0;">Your data</h3>'+
+    '<p class="small">Everything is stored in this browser on this device. Export a backup before switching phones or clearing browser data.</p>'+
+    '<div class="row"><div><button class="btn ghost" onclick="openDataModal()">Export / import data</button></div>'+
+    '<div><button class="btn ghost" onclick="window.print()">🖨️ Print summary</button></div></div></div>'+
+  '<div class="card"><h3 style="margin-top:0;">Danger zone</h3>'+
+    (hasDemo? '<p class="small">The sample flock and sample entries that came with FlockBook are still in your data.</p><button class="btn amber" onclick="clearDemo()">Clear demo data</button> ' : '<p class="small mut">Demo data already cleared.</p>')+
+    '<button class="btn danger" onclick="eraseAll()">Erase ALL data</button>'+
+    '<p class="small mut" style="margin-top:8px;">Erase removes every flock, egg, cost, and sale and cannot be undone. Export a backup first if there\'s any chance you\'ll want it back.</p></div>'+
+    '<div class="card"><h3 style="margin-top:0;">Legal</h3><p>Terms of Use, the applicable disclaimer, our privacy statement, and your recorded acceptance.</p><button type="button" class="btn ww-legal-open-btn" data-ww-legal="1">⚖️ Legal — Terms, Disclaimer &amp; Privacy</button></div>';
+}
+function saveSettings(){
+  var p = document.getElementById('setPrice').value;
+  var s = document.getElementById('setStore').value;
+  if(String(p).trim()==='' || num(p)<0 || String(s).trim()==='' || num(s)<0){ toast('Prices must be 0 or more.', true); return; }
+  state.settings.defaultPrice = Math.round(num(p)*100)/100;
+  state.settings.storePrice = Math.round(num(s)*100)/100;
+  save(); render(); toast('Settings saved.');
+}
+function clearDemo(){
+  if(!confirm('Remove the sample flock and sample entries? Anything you entered yourself stays.')) return;
+  state.flocks = state.flocks.filter(function(f){ return !f.demo; });
+  var keepIds = {}; state.flocks.forEach(function(f){ keepIds[f.id]=1; });
+  state.countEvents = state.countEvents.filter(function(e){ return !e.demo && keepIds[e.flockId]; });
+  state.eggs = state.eggs.filter(function(e){ return !e.demo && keepIds[e.flockId]; });
+  state.costs = state.costs.filter(function(c){ return !c.demo; });
+  state.sales = state.sales.filter(function(s){ return !s.demo; });
+  save(); render(); toast('Demo data cleared. Your flock book is all yours now. 🐔');
+}
+function eraseAll(){
+  if(!confirm('Erase ALL FlockBook data on this device? This cannot be undone.')) return;
+  if(!confirm('Really erase everything — flocks, eggs, costs, sales?')) return;
+  var keepSeeded = state.settings.seeded;
+  state = blankState();
+  state.settings.seeded = keepSeeded; /* don't re-seed demo after an intentional wipe */
+  save(); render(); toast('All data erased.');
+}
+function openDataModal(){
+  document.getElementById('dataText').value = JSON.stringify(state, null, 1);
+  document.getElementById('dataModal').classList.add('open');
+}
+function closeDataModal(){ document.getElementById('dataModal').classList.remove('open'); }
+function downloadExport(){
+  var text = document.getElementById('dataText').value || JSON.stringify(state, null, 1);
+  try{
+    var blob = new Blob([text], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'flockbook-backup-'+todayStr()+'.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); a.remove(); }catch(e){} }, 400);
+    toast('Backup downloaded.');
+  }catch(e){
+    toast('Download blocked here — copy the text in the box and save it as a .json file.', true);
+  }
+}
+function applyImport(text){
+  var parsed;
+  try{ parsed = JSON.parse(text); }
+  catch(e){ toast('That backup couldn\'t be read — it isn\'t valid data. Nothing was changed.', true); return false; }
+  if(!parsed || typeof parsed!=='object' || (!Array.isArray(parsed.flocks) && !Array.isArray(parsed.eggs) && !Array.isArray(parsed.costs))){
+    toast('That file doesn\'t look like a FlockBook backup. Nothing was changed.', true); return false;
+  }
+  if(!confirm('Import this backup? It REPLACES all current FlockBook data on this device.')) return false;
+  state = sanitizeState(parsed);
+  state.settings.seeded = true;
+  save(); closeDataModal(); render();
+  toast('Backup imported. Welcome back. 🐔');
+  return true;
+}
+function importFromText(){
+  var text = document.getElementById('dataText').value;
+  if(!text || !text.trim()){ toast('Paste a backup into the box first.', true); return; }
+  applyImport(text);
+}
+function importFromFile(input){
+  var file = input && input.files && input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(){ applyImport(String(reader.result||'')); input.value=''; };
+  reader.onerror = function(){ toast('Couldn\'t read that file. Nothing was changed.', true); input.value=''; };
+  reader.readAsText(file);
+}
+
+/* ---------- init + test hooks ---------- */
+load();
+render();
+window.FB = {
+  getState:function(){ return state; },
+  setState:function(s){ state = sanitizeState(s); save(); render(); },
+  hensOn:hensOn, hensNow:hensNow, totalHensNow:totalHensNow,
+  eggsInRange:eggsInRange, costsInRange:costsInRange, salesInRange:salesInRange,
+  henDays:henDays, layRatePct:layRatePct, costPerDozen:costPerDozen,
+  costPerHenMonth:costPerHenMonth, breakEvenPerDozen:breakEvenPerDozen,
+  weeklyBuckets:weeklyBuckets, monthlyBuckets:monthlyBuckets, allTimeRange:allTimeRange,
+  rangeLastDays:rangeLastDays, addDays:addDays, todayStr:todayStr,
+  sanitizeState:sanitizeState, blankState:blankState, applyImport:applyImport,
+  LS_KEY:LS_KEY
+};
+</script>
+
+<style id="ww-legal-css">
+.ww-legal-overlay{position:fixed;inset:0;z-index:99990;background:rgba(10,12,14,.72);display:flex;align-items:center;justify-content:center;padding:14px;box-sizing:border-box}
+.ww-legal-card{background:#fff;color:#17202a;border-radius:14px;max-width:560px;width:100%;max-height:92vh;overflow:auto;padding:22px 20px;box-sizing:border-box;box-shadow:0 18px 50px rgba(0,0,0,.35);font-family:inherit}
+.ww-legal-card h2{margin:0 0 4px;font-size:22px}
+.ww-legal-card h3{margin:16px 0 6px}
+.ww-legal-sum{font-size:16px;line-height:1.45;margin:12px 0}
+.ww-legal-sum p{margin:6px 0;font-weight:600}
+.ww-legal-note{font-size:13px;color:#445; margin:10px 0}
+.ww-legal-updated{background:#fff3cd;border:1px solid #e3c565;border-radius:8px;padding:8px 10px;font-size:14px;margin:10px 0}
+.ww-legal-btn{display:block;width:100%;min-height:48px;margin:10px 0;padding:12px 14px;font-size:16px;border-radius:10px;border:1px solid #9db2c3;background:#eef4f8;color:#17202a;cursor:pointer;box-sizing:border-box}
+.ww-legal-agree{background:#17603a;border-color:#17603a;color:#fff;font-weight:700}
+.ww-legal-page{position:fixed;inset:0;z-index:99980;background:#fff;color:#17202a;overflow:auto;padding:18px 16px 40px;box-sizing:border-box}
+.ww-legal-page .ww-legal-inner{max-width:680px;margin:0 auto}
+.ww-legal-page h2{font-size:21px}.ww-legal-page h3{font-size:17px;margin-top:18px}.ww-legal-page p,.ww-legal-page li{font-size:14.5px;line-height:1.55}
+.ww-legal-close{min-height:48px;padding:10px 18px;font-size:15px;border-radius:10px;border:1px solid #9db2c3;background:#eef4f8;cursor:pointer}
+.ww-legal-open-btn{min-height:48px}
+.ww-legal-check{display:flex;gap:10px;align-items:flex-start;margin:12px 0;font-size:15px;line-height:1.4;cursor:pointer;text-align:left}
+.ww-legal-check input{width:22px;height:22px;min-width:22px;margin-top:1px;cursor:pointer}
+.ww-legal-agree[disabled]{opacity:.45;cursor:not-allowed}
+[hidden]{display:none !important}
+</style>
+
+<div id="wwLegalOverlay" class="ww-legal-overlay" hidden>
+  <div class="ww-legal-card" role="dialog" aria-modal="true" aria-labelledby="wwLegalTitle">
+    <h2>FlockBook</h2>
+    <h3 id="wwLegalTitle" style="margin-top:2px">Terms of Use</h3>
+    <div id="wwLegalUpdated" class="ww-legal-updated" hidden>Our terms were updated (v1.0).</div>
+    <div class="ww-legal-sum">
+      <p>Your data stays on your device.</p>
+      <p>Estimates are aids, not guarantees.</p>
+      <p>You're responsible for checking outputs before you rely on them.</p>
+    </div>
+    <p class="ww-legal-note">The full Terms and Disclaimer are one tap away, now and any time in Settings → Legal.</p>
+    <button type="button" class="ww-legal-btn" id="wwLegalReadTerms">Read the full Terms</button>
+    
+    <label class="ww-legal-check" for="wwLegalCheck"><input type="checkbox" id="wwLegalCheck"><span>I have read and I agree to the Terms of Use</span></label>
+    <button type="button" class="ww-legal-btn ww-legal-agree" id="wwLegalAgree" disabled>I Agree</button>
+  </div>
+</div>
+<div id="wwLegalReader" class="ww-legal-page" hidden>
+  <div class="ww-legal-inner">
+    <button type="button" class="ww-legal-close" id="wwLegalReaderBack">← Back</button>
+    <div id="wwLegalReaderBody"></div>
+  </div>
+</div>
+<div id="wwLegalPage" class="ww-legal-page" hidden>
+  <div class="ww-legal-inner">
+    <button type="button" class="ww-legal-close" id="wwLegalPageClose">← Back</button>
+    <h2>Legal</h2>
+    <h3>Terms of Use</h3>
+    <div id="wwLegalTermsText"><h2>Terms of Use — White Wolf Digital Apps</h2>
+<p><strong>Version 1.0</strong></p>
+<p><strong>Seller: White Wolf Tree Service LLC, selling digital products under the name &quot;White Wolf Digital&quot;</strong></p>
+<p><strong>Contact: whitewolfoklahoma@gmail.com</strong></p>
+<hr>
+<h3>1. What you&#x27;re buying</h3>
+<p>Our apps (including ForgeFit AI, ForgeKitchen, TreeBid Pro, SnowBid,</p>
+<p>WashPrice Pro, RoofSquares, JobProfit Tracker, PastureLedger, and the other</p>
+<p>titles sold under White Wolf Digital) are single-file software tools. When</p>
+<p>you buy one, you are buying a <strong>license to use the file</strong>, not ownership of</p>
+<p>the software itself.</p>
+<h3>2. Your license</h3>
+<ul>
+<li>You may use the app for your own personal or business work.</li>
+<li>You may open it on your own devices (phone, tablet, computer) and move your</li>
+</ul>
+<p>  own data between them using the app&#x27;s built-in backup/export tools.</p>
+<ul>
+<li>You may <strong>not</strong> resell, redistribute, give away, upload, or share the app</li>
+</ul>
+<p>  file (or a copy of it) with anyone else — including posting it online,</p>
+<p>  bundling it with other products, or selling access to it.</p>
+<ul>
+<li>You may <strong>not</strong> claim the app as your own work, remove its branding or</li>
+</ul>
+<p>  notices, or use it to build a competing product for resale.</p>
+<ul>
+<li>One purchase = one buyer. A business purchase covers the buyer and their</li>
+</ul>
+<p>  own employees using it for that business&#x27;s work; it does not cover other</p>
+<p>  businesses.</p>
+<h3>3. Your data stays yours — and stays on your device</h3>
+<ul>
+<li>The current versions of our apps run <strong>entirely on your device</strong>. They have</li>
+</ul>
+<p>  no accounts, no sign-in, no analytics, and they collect, transmit, and store</p>
+<p>  <strong>none</strong> of your information on any server. We never see your data.</p>
+<ul>
+<li>Your records are stored in your browser/app storage on your device. **You</li>
+</ul>
+<p>  are responsible for backing them up** using the app&#x27;s export tools. If you</p>
+<p>  clear your browser data, lose your device, or uninstall the app, your</p>
+<p>  records may be permanently lost, and we cannot recover them — we never had</p>
+<p>  a copy.</p>
+<ul>
+<li>Files you export (backups, quotes, PDFs) are under your control. Where you</li>
+</ul>
+<p>  store or send them is up to you.</p>
+<h3>4. Estimates are tools, not guarantees</h3>
+<p>Every number our apps produce — bids, prices, costs, calorie targets,</p>
+<p>projections, schedules, totals — is an **estimate generated from the</p>
+<p>information you enter and the settings you choose**. Outputs are aids for</p>
+<p>your own judgment, not guarantees of price, profit, outcome, or result. You</p>
+<p>are responsible for checking any output before relying on it (see also the</p>
+<p>disclaimer that applies to your app: Health Disclaimer for fitness/nutrition</p>
+<p>apps, Estimator Disclaimer for contractor tools). If an input is wrong, the</p>
+<p>output will be wrong.</p>
+<h3>5. Acceptable use</h3>
+<p>Don&#x27;t use the apps to break the law, infringe anyone&#x27;s rights, or</p>
+<p>misrepresent quotes, invoices, or records to your own customers. For the</p>
+<p>fitness apps, the guardrails in the app (healthy-rate limits, calorie floor)</p>
+<p>are part of the product — don&#x27;t treat the app as a way around them.</p>
+<h3>6. Provided &quot;as is&quot;</h3>
+<p>The apps are provided **&quot;as is&quot; and &quot;as available,&quot; without warranties of</p>
+<p>any kind**, express or implied — including merchantability, fitness for a</p>
+<p>particular purpose, accuracy of calculations, and uninterrupted or</p>
+<p>error-free operation — to the maximum extent allowed by law. Software has</p>
+<p>bugs; browsers change; we work to fix problems but do not promise any app is</p>
+<p>error-free or will work on every device or browser forever.</p>
+<h3>7. Limitation of liability</h3>
+<p>To the maximum extent allowed by law:</p>
+<ul>
+<li>We are **not liable for indirect, incidental, special, or consequential</li>
+</ul>
+<p>  damages** — including lost profits, lost or mispriced jobs, lost data, or</p>
+<p>  business interruption — arising from use of the apps.</p>
+<ul>
+<li>Our total liability for any claim connected to an app is limited to the</li>
+</ul>
+<p>  <strong>amount you paid for that app</strong>.</p>
+<ul>
+<li>Nothing in these terms limits liability that cannot legally be limited.</li>
+</ul>
+<h3>8. Refunds</h3>
+<p>Refunds are handled **by the storefront you bought from, under that</p>
+<p>storefront&#x27;s policy** — Gumroad&#x27;s refund policy for Gumroad purchases, and</p>
+<p>Google Play&#x27;s refund policy for Play purchases. These terms do not add to,</p>
+<p>replace, or override the storefront&#x27;s refund rules. If a file is defective</p>
+<p>and won&#x27;t open, contact us at whitewolfoklahoma@gmail.com and we&#x27;ll fix or</p>
+<p>replace the file.</p>
+<h3>9. Updates and changes to these terms</h3>
+<ul>
+<li>We may release updated versions of an app. Updates may add, change, or</li>
+</ul>
+<p>  remove features.</p>
+<ul>
+<li>We may update these terms. The version you agreed to is recorded in the</li>
+</ul>
+<p>  app (version number and date) at first-run acceptance. If terms change,</p>
+<p>  the app may ask you to accept the new version once on next open. Updated</p>
+<p>  terms apply going forward, not retroactively.</p>
+<ul>
+<li>If you don&#x27;t agree to an updated version of the terms, stop using the app.</li>
+</ul>
+<h3>10. Governing law</h3>
+<p>These terms are governed by the laws of the <strong>State of Oklahoma</strong>, USA.</p>
+<p>(Attorney to confirm governing law and venue before publication.)</p>
+<h3>11. Contact</h3>
+<p>White Wolf Tree Service LLC (White Wolf Digital) —</p>
+<p>whitewolfoklahoma@gmail.com.</p>
+<hr>
+<h3>CONNECTED FEATURES — takes effect only when these features ship</h3>
+<p>*The sections below apply only to future connected features (device sync via</p>
+<p>Health Connect, AI voice logging, and the AI Goal Preview in ForgeFit). They</p>
+<p>do not apply to the current offline versions, which never transmit data.*</p>
+<ul>
+<li><strong>Opt-in only.</strong> Connected features are off by default. Each one asks for</li>
+</ul>
+<p>  your separate, explicit consent — on its own consent screen, in plain</p>
+<p>  language — before anything leaves your device. Declining never disables</p>
+<p>  the app&#x27;s offline features.</p>
+<ul>
+<li><strong>What gets sent.</strong> Only what the consent screen names, only when you use</li>
+</ul>
+<p>  the feature: for example, a meal description (text, or audio only if cloud</p>
+<p>  transcription is on) for AI voice logging, or the single photo you choose</p>
+<p>  for an AI Goal Preview.</p>
+<ul>
+<li><strong>No retention by us.</strong> Our relay service passes your request to the named</li>
+</ul>
+<p>  AI provider and keeps nothing — no copies of your photos, audio,</p>
+<p>  transcripts, or entries are stored on our servers. Provider handling is</p>
+<p>  described on the consent screen and in the Privacy Policy.</p>
+<ul>
+<li><strong>Health data stays on the device.</strong> Device sync (Health Connect) reads</li>
+</ul>
+<p>  your health data on your phone and stores it in the app on your phone. It</p>
+<p>  is not uploaded to us.</p>
+<ul>
+<li><strong>Allowances.</strong> Some connected features run on third-party AI services we</li>
+</ul>
+<p>  pay for per use, so they may include a monthly allowance described in the</p>
+<p>  app (for example, a set number of AI previews or voice entries per month),</p>
+<p>  with optional additional credits. Allowances and pricing will be shown in</p>
+<p>  the app before you use the feature; they are not a subscription unless the</p>
+<p>  app says so in plain words.</p>
+<ul>
+<li><strong>Permissions.</strong> Connected features may request device permissions (such</li>
+</ul>
+<p>  as Health Connect access or the microphone) at the moment you first use</p>
+<p>  them. You can revoke permissions any time in your device settings; the</p>
+<p>  related feature will simply stop working.</p></div>
+    
+    <h3>Privacy</h3>
+    <p>This app has no accounts and collects no data. Everything you enter is stored only on this device, in this browser's local storage. Nothing is uploaded, tracked, or shared. Exported backup files are under your control — where you store or send them is up to you. If you clear your browser data, lose your device, or uninstall the app, your records may be permanently lost, so keep backups using the app's export tools.</p>
+    <p id="wwLegalAcceptLine"></p>
+    <p><strong>Sold by White Wolf Tree Service LLC (White Wolf Digital) — whitewolfoklahoma@gmail.com</strong></p>
+  </div>
+</div>
+
+<script>
+/* White Wolf Digital — in-app legal pattern v1 (Terms acceptance + Settings > Legal) */
+const TERMS_VERSION = "1.0";
+(function(){
+  var WW_KEY = "flockbook_v1";
+  var WW_SAVE = "save";
+  var WW_DISC = false;
+  function wwRaw(){ try{ var r = localStorage.getItem(WW_KEY); return r ? JSON.parse(r) : null; }catch(e){ return null; } }
+  function wwStateObj(){ try{ if(typeof state !== "undefined" && state && typeof state === "object") return state; }catch(e){} return null; }
+  function wwGetLegal(){
+    var st = wwStateObj(); if(st && st.legal && typeof st.legal === "object") return st.legal;
+    var r = wwRaw(); if(r && r.legal && typeof r.legal === "object") return r.legal;
+    return null;
+  }
+  function wwPersist(rec){
+    var st = wwStateObj();
+    if(st){ st.legal = rec;
+      try{ if(WW_SAVE === "saveState" && typeof saveState === "function"){ saveState(); return; } }catch(e){}
+      try{ if(WW_SAVE === "save" && typeof save === "function"){ save(); return; } }catch(e){}
+    }
+    try{ var r = wwRaw() || {}; r.legal = rec; localStorage.setItem(WW_KEY, JSON.stringify(r)); }catch(e){}
+  }
+  function wwAcceptLine(){
+    var el = document.getElementById("wwLegalAcceptLine"); if(!el) return;
+    var rec = wwGetLegal();
+    if(rec && rec.acceptedDate) el.textContent = "You agreed to Terms v" + (rec.termsVersion || TERMS_VERSION) + " on " + rec.acceptedDate + ".";
+    else el.textContent = "No acceptance recorded yet on this device.";
+  }
+  function wwShowReader(which){
+    var body = document.getElementById("wwLegalReaderBody");
+    var src = document.getElementById(which === "disc" ? "wwLegalDiscText" : "wwLegalTermsText");
+    if(!body || !src) return;
+    body.innerHTML = src.innerHTML;
+    document.getElementById("wwLegalReader").hidden = false;
+  }
+  function wwOpenLegal(){ wwAcceptLine(); document.getElementById("wwLegalPage").hidden = false; }
+  window.__wwOpenLegal = wwOpenLegal;
+  document.addEventListener("click", function(ev){
+    var t = ev.target && ev.target.closest ? ev.target.closest("[data-ww-legal]") : null;
+    if(t){ ev.preventDefault(); wwOpenLegal(); }
+  });
+  var agreeBtn = document.getElementById("wwLegalAgree");
+  var wwCheck = document.getElementById("wwLegalCheck");
+  function wwGate(){ if(agreeBtn && wwCheck) agreeBtn.disabled = !wwCheck.checked; }
+  if(wwCheck) wwCheck.addEventListener("change", wwGate);
+  wwGate();
+  if(agreeBtn) agreeBtn.addEventListener("click", function(){
+    if(wwCheck && !wwCheck.checked){ wwGate(); return; }
+    var rec = { termsVersion: TERMS_VERSION, acceptedDate: new Date().toISOString().slice(0,10), disclaimerShown: WW_DISC };
+    wwPersist(rec);
+    document.getElementById("wwLegalOverlay").hidden = true;
+    wwAcceptLine();
+  });
+  var rt = document.getElementById("wwLegalReadTerms");
+  if(rt) rt.addEventListener("click", function(){ wwShowReader("terms"); });
+  var rd = document.getElementById("wwLegalReadDisc");
+  if(rd) rd.addEventListener("click", function(){ wwShowReader("disc"); });
+  var rb = document.getElementById("wwLegalReaderBack");
+  if(rb) rb.addEventListener("click", function(){ document.getElementById("wwLegalReader").hidden = true; });
+  var pc = document.getElementById("wwLegalPageClose");
+  if(pc) pc.addEventListener("click", function(){ document.getElementById("wwLegalPage").hidden = true; });
+  var rec = wwGetLegal();
+  if(rec && rec.termsVersion === TERMS_VERSION){
+    var st2 = wwStateObj();
+    if(st2 && !st2.legal) wwPersist(rec);
+    wwAcceptLine();
+  } else {
+    if(rec && rec.termsVersion){ var u = document.getElementById("wwLegalUpdated"); if(u) u.hidden = false; }
+    document.getElementById("wwLegalOverlay").hidden = false;
+  }
+})();
+</script>
+
+</body>
+</html>
