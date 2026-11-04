@@ -91,6 +91,8 @@ footer.app{max-width:980px; margin:0 auto; padding:0 12px 30px; color:var(--mute
   <div class="brand">🐔 Flock<span class="egg">Book</span></div>
   <div class="tag">Egg log &amp; true cost-per-dozen tracker for backyard flocks</div>
 </header>
+<div style="text-align:center;padding:12px 16px;background:#fff8e6;border-bottom:2px solid #e8a13a;"><a href="https://travisbriggs.gumroad.com/l/drvlj" target="_blank" rel="noopener" style="display:inline-block;background:#e8a13a;color:#1d2b2e;font-weight:800;font-size:17px;padding:10px 22px;border-radius:8px;text-decoration:none;">Get the full version — $29</a></div>
+
 <nav class="tabs" id="tabbar"></nav>
 <main id="view"></main>
 <div id="printArea"></div>
@@ -322,6 +324,16 @@ function salesInRange(startS, endS){
   });
   return r;
 }
+/* Eggs on hand (unsold), computed at render time from the egg log + sales:
+   all-time net eggs (collected − broken) − eggs sold (sales are recorded in
+   dozens, so dozens × 12). Never stored — always derived from source records. */
+function eggsOnHand(){
+  var all = allTimeRange();
+  var net = eggsInRange(null, all.start, all.end).net;
+  var soldEggs = Math.round(salesInRange(all.start, all.end).dozens * 12 * 10) / 10;
+  var eggs = Math.round((net - soldEggs) * 10) / 10;
+  return { eggs:eggs, dozens:eggs/12, net:net, soldEggs:soldEggs };
+}
 function allTimeRange(){
   var dates = ['9999-12-31','0000-01-01'], min='9999-12-31', max='0000-01-01', any=false;
   function see(d){ if(isValidDateStr(d)){ any=true; if(d<min)min=d; if(d>max)max=d; } }
@@ -476,6 +488,7 @@ function viewDashboard(){
   var c30 = costsInRange(r30.start, r30.end);
   var profit30 = s30.income - c30;
   var lr7 = layRatePct(null, r7.start, r7.end);
+  var onHand = eggsOnHand();
   var storeNote = '';
   if(cpd30!==null){
     if(cpd30 < state.settings.storePrice) storeNote = 'Beats the store ('+money(state.settings.storePrice)+'/doz) by '+money(state.settings.storePrice-cpd30)+' a dozen 🎉';
@@ -499,6 +512,7 @@ function viewDashboard(){
     '<div class="grid">'+
       statCard('Eggs today', eToday.net, eToday.collected+' collected · '+eToday.broken+' broken/dirty')+
       statCard('Dozens this week', (e7.net/12).toFixed(1), e7.net+' net eggs, last 7 days')+
+      statCard('Dozens on hand (unsold)', onHand.eggs+' eggs', onHand.dozens.toFixed(1)+' dozen on hand · '+onHand.net+' net eggs − '+onHand.soldEggs+' sold, all time')+
       statCard('Cost per dozen (30d)', moneyOrDash(cpd30), trendHtml||'Needs eggs + costs in the last 30 days')+
       statCard('Hens on hand', totalHensNow(), state.flocks.length+' flock(s)')+
       statCard('Lay rate (7d)', pctOrDash(lr7), 'Eggs laid per hen per day')+
